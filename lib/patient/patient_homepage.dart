@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import './report_upload_page.dart';
+import './Report_history_page.dart';
 
 class PatientHomePage extends StatefulWidget {
   @override
@@ -133,6 +134,24 @@ class _PatientHomePageState extends State<PatientHomePage> {
                     // Services Menu
                     Column(
                       children: [
+                        _buildMenuCard(
+                          icon: Icons.history,
+                          title: "Report history",
+                          subtitle: "See your report history",
+                          color: Colors.lightGreen,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReportHistoryPage(
+                                  dio: _dio,
+                                  patientId: _patientData!['id'],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
                         _buildMenuCard(
                           icon: Icons.upload_file,
                           title: "Upload Report",
