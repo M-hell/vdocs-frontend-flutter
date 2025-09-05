@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../Appointement/ClinicAppointmentsPage.dart';
 
 class ClinicHomePage extends StatefulWidget {
   @override
@@ -24,7 +25,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
   void _initializeDio() {
     // Get the Dio instance passed from login page
     final Dio? passedDio = ModalRoute.of(context)?.settings.arguments as Dio?;
-    
+
     if (passedDio != null) {
       _dio = passedDio;
     } else {
@@ -34,7 +35,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
         _dio.options.extra['withCredentials'] = true;
       }
     }
-    
+
     _fetchClinicData();
   }
 
@@ -77,11 +78,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/',
-                (route) => false,
-              );
+              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
             },
           ),
         ],
@@ -89,89 +86,96 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error, size: 64, color: Colors.red),
-                      SizedBox(height: 16),
-                      Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red, fontSize: 16),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _fetchClinicData,
-                        child: Text("Retry"),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, size: 64, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.red, fontSize: 16),
+                    textAlign: TextAlign.center,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _fetchClinicData,
-                  child: SingleChildScrollView(
-                    physics: AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _fetchClinicData,
+                    child: Text("Retry"),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _fetchClinicData,
+              child: SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Clinic Information Card
+                    _buildClinicInfoCard(),
+                    SizedBox(height: 24),
+
+                    // Dashboard Title
+                    Text(
+                      "Dashboard",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+
+                    // Dashboard Grid
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
                       children: [
-                        // Clinic Information Card
-                        _buildClinicInfoCard(),
-                        SizedBox(height: 24),
-                        
-                        // Dashboard Title
-                        Text(
-                          "Dashboard",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        _buildDashboardCard(
+                          icon: Icons.people,
+                          title: "Patients",
+                          onTap: () {
+                            // Navigate to patients list
+                          },
                         ),
-                        SizedBox(height: 16),
-                        
-                        // Dashboard Grid
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          children: [
-                            _buildDashboardCard(
-                              icon: Icons.people,
-                              title: "Patients",
-                              onTap: () {
-                                // Navigate to patients list
-                              },
-                            ),
-                            _buildDashboardCard(
-                              icon: Icons.calendar_today,
-                              title: "Appointments",
-                              onTap: () {
-                                // Navigate to appointments
-                              },
-                            ),
-                            _buildDashboardCard(
-                              icon: Icons.medical_services,
-                              title: "Services",
-                              onTap: () {
-                                // Navigate to services
-                              },
-                            ),
-                            _buildDashboardCard(
-                              icon: Icons.settings,
-                              title: "Settings",
-                              onTap: () {
-                                // Navigate to settings
-                              },
-                            ),
-                          ],
+                        _buildDashboardCard(
+                          icon: Icons.calendar_today,
+                          title: "Appointments",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ClinicAppointmentsPage(dio: _dio),
+                              ),
+                            );
+                          },
+                        ),
+
+                        _buildDashboardCard(
+                          icon: Icons.medical_services,
+                          title: "Services",
+                          onTap: () {
+                            // Navigate to services
+                          },
+                        ),
+                        _buildDashboardCard(
+                          icon: Icons.settings,
+                          title: "Settings",
+                          onTap: () {
+                            // Navigate to settings
+                          },
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
+              ),
+            ),
     );
   }
 
@@ -204,35 +208,35 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
             SizedBox(height: 16),
             Divider(),
             SizedBox(height: 16),
-            
+
             _buildInfoRow(
               icon: Icons.email,
               label: "Email",
               value: _clinicData!['email'] ?? 'N/A',
             ),
             SizedBox(height: 12),
-            
+
             _buildInfoRow(
               icon: Icons.phone,
               label: "Contact",
               value: _clinicData!['contactNo'] ?? 'N/A',
             ),
             SizedBox(height: 12),
-            
+
             _buildInfoRow(
               icon: Icons.location_on,
               label: "Address",
               value: _clinicData!['address'] ?? 'N/A',
             ),
             SizedBox(height: 12),
-            
+
             _buildInfoRow(
               icon: Icons.calendar_today,
               label: "Created",
               value: _formatDate(_clinicData!['createdAt']),
             ),
             SizedBox(height: 12),
-            
+
             _buildInfoRow(
               icon: Icons.update,
               label: "Last Updated",
@@ -269,10 +273,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
               SizedBox(height: 2),
               Text(
                 value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -283,7 +284,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
 
   String _formatDate(String? dateString) {
     if (dateString == null) return 'N/A';
-    
+
     try {
       final DateTime date = DateTime.parse(dateString);
       return "${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
@@ -310,10 +311,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
               SizedBox(height: 16),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
           ),
