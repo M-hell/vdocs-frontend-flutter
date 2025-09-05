@@ -75,11 +75,26 @@ class _ClinicAppointmentDetailPageState
         const SnackBar(content: Text('Appointment updated successfully')),
       );
 
-      fetchAppointmentDetail(); // Refresh details
+      fetchAppointmentDetail();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update appointment: $e')),
       );
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'COMPLETED':
+        return Colors.green;
+      case 'PENDING':
+        return Colors.orange;
+      case 'CANCELLED':
+        return Colors.red;
+      case 'CONFIRMED':
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -96,28 +111,124 @@ class _ClinicAppointmentDetailPageState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Patient: ${appointment!['patientName']}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  // Patient Info Card
+                  Card(
+                    elevation: 6,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.person, size: 32, color: Colors.blue),
+                              const SizedBox(width: 12),
+                              Text(
+                                appointment!['patientName'] ?? 'Unknown',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text("Contact: ${appointment!['patientContactNo']}"),
+                          Text("Clinic: ${appointment!['clinic']['name']}"),
+                          Text(
+                            "Appointment Date: ${DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.parse(appointment!['appointmentDate']))}",
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Text(
+                                "Status: ",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(
+                                    appointment!['status'],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  appointment!['status'] ?? 'N/A',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text('Contact: ${appointment!['patientContactNo']}'),
-                  const SizedBox(height: 8),
-                  Text('Clinic: ${appointment!['clinic']['name']}'),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Appointment Date: ${DateFormat('yyyy-MM-dd – HH:mm').format(DateTime.parse(appointment!['appointmentDate']))}',
+
+                  // Medical Requirement Card
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Medical Requirement",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(appointment!['medicalRequirement'] ?? 'N/A'),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Remarks
+                  TextField(
+                    controller: _remarksController,
+                    decoration: const InputDecoration(
+                      labelText: 'Remarks',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
                   ),
                   const SizedBox(height: 16),
+
+                  // Clinic Report
+                  TextField(
+                    controller: _clinicReportController,
+                    decoration: const InputDecoration(
+                      labelText: 'Clinic Report URL',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Status Dropdown
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(
                       labelText: 'Status',
                       border: OutlineInputBorder(),
                     ),
-                    items: ['PENDING', 'COMPLETED', 'CANCELLED']
+                    items: ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED']
                         .map(
                           (status) => DropdownMenuItem(
                             value: status,
@@ -132,27 +243,22 @@ class _ClinicAppointmentDetailPageState
                       });
                     },
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _remarksController,
-                    decoration: const InputDecoration(
-                      labelText: 'Remarks',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _clinicReportController,
-                    decoration: const InputDecoration(
-                      labelText: 'Clinic Report URL',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
+
                   const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: updateAppointment,
-                    child: const Text('Update Appointment'),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: updateAppointment,
+                      icon: const Icon(Icons.save),
+                      label: const Text("Update Appointment"),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        textStyle: const TextStyle(fontSize: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
