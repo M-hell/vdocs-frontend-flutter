@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import './report_upload_page.dart';
 import '../Appointement/BookAppointmentPage.dart';
 import './Report_history_page.dart';
+import './patient_appointments.dart'; // ✅ Import added
 
 class PatientHomePage extends StatefulWidget {
   @override
@@ -190,6 +191,24 @@ class _PatientHomePageState extends State<PatientHomePage> {
                             );
                           },
                         ),
+                        // ✅ New Appointment History Card
+    _buildMenuCard(
+      icon: Icons.history_toggle_off,
+      title: "Appointment History",
+      subtitle: "View your past appointments",
+      color: Colors.teal,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PatientAppointmentPage(
+              dio: _dio,
+              patientId: _patientData!['id'],
+            ),
+          ),
+        );
+      },
+    ),
 
                         SizedBox(height: 16),
                         _buildMenuCard(
