@@ -4,6 +4,7 @@ import 'clinic/clinic_login_page.dart';
 import 'clinic/clinic_homepage.dart';
 import 'patient/patient_login_page.dart';
 import 'patient/patient_homepage.dart';
+import 'patient/report_upload_page.dart';
 
 void main() {
   runApp(MyApp());
@@ -14,9 +15,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Medical App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue),
       initialRoute: '/',
       routes: {
         '/': (context) => LoginPage(),
@@ -24,6 +23,7 @@ class MyApp extends StatelessWidget {
         '/clinic-home': (context) => ClinicHomePage(),
         '/patient-login': (context) => PatientLoginPage(),
         '/patient-home': (context) => PatientHomePage(),
+        '/uploadReport': (context) => ReportUploadPage(),
       },
     );
   }

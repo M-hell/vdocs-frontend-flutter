@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import './report_upload_page.dart';
 
 class PatientHomePage extends StatefulWidget {
   @override
@@ -25,7 +26,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
   void _initializeDio() {
     // Get the Dio instance passed from login page
     final Dio? passedDio = ModalRoute.of(context)?.settings.arguments as Dio?;
-    
+
     if (passedDio != null) {
       _dio = passedDio;
     } else {
@@ -35,17 +36,16 @@ class _PatientHomePageState extends State<PatientHomePage> {
         _dio.options.extra['withCredentials'] = true;
       }
     }
-    
+
     _fetchPatientData();
   }
+
   Future<void> _fetchPatientData() async {
     try {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
       });
-
-      
 
       final response = await _dio.get(
         "http://localhost:8084/api/patient/auth/me",
@@ -81,11 +81,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/',
-                (route) => false,
-              );
+              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
             },
           ),
         ],
@@ -93,102 +89,120 @@ class _PatientHomePageState extends State<PatientHomePage> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error, size: 64, color: Colors.red),
-                      SizedBox(height: 16),
-                      Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red, fontSize: 16),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _fetchPatientData,
-                        child: Text("Retry"),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, size: 64, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.red, fontSize: 16),
+                    textAlign: TextAlign.center,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _fetchPatientData,
-                  child: SingleChildScrollView(
-                    physics: AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _fetchPatientData,
+                    child: Text("Retry"),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _fetchPatientData,
+              child: SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Patient Profile Card
+                    _buildPatientProfileCard(),
+                    SizedBox(height: 24),
+
+                    // Services Section
+                    Text(
+                      "Services",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+
+                    // Services Menu
+                    Column(
                       children: [
-                        // Patient Profile Card
-                        _buildPatientProfileCard(),
-                        SizedBox(height: 24),
-                        
-                        // Services Section
-                        Text(
-                          "Services",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        _buildMenuCard(
+                          icon: Icons.upload_file,
+                          title: "Upload Report",
+                          subtitle: "Upload your medical report",
+                          color: Colors.red,
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/uploadReport',
+                              arguments: {
+                                'dio': _dio,
+                                'patientId': _patientData!['id'],
+                              },
+                            );
+                          },
                         ),
                         SizedBox(height: 16),
-                        
-                        // Services Menu
-                        Column(
-                          children: [
-                            _buildMenuCard(
-                              icon: Icons.book_online,
-                              title: "Book Appointment",
-                              subtitle: "Schedule your next visit",
-                              color: Colors.blue,
-                              onTap: () {
-                                // Navigate to booking
-                              },
-                            ),
-                            SizedBox(height: 16),
-                            _buildMenuCard(
-                              icon: Icons.history,
-                              title: "Medical History",
-                              subtitle: "View your past records",
-                              color: Colors.orange,
-                              onTap: () {
-                                // Navigate to history
-                              },
-                            ),
-                            SizedBox(height: 16),
-                            _buildMenuCard(
-                              icon: Icons.receipt_long,
-                              title: "Bills & Payments",
-                              subtitle: "Manage your payments",
-                              color: Colors.green,
-                              onTap: () {
-                                // Navigate to bills
-                              },
-                            ),
-                            SizedBox(height: 16),
-                            _buildMenuCard(
-                              icon: Icons.medication,
-                              title: "Prescriptions",
-                              subtitle: "View your prescriptions",
-                              color: Colors.purple,
-                              onTap: () {
-                                // Navigate to prescriptions
-                              },
-                            ),
-                          ],
+                        _buildMenuCard(
+                          icon: Icons.book_online,
+                          title: "Book Appointment",
+                          subtitle: "Schedule your next visit",
+                          color: Colors.blue,
+                          onTap: () {
+                            // Navigate to booking
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        _buildMenuCard(
+                          icon: Icons.history,
+                          title: "Medical History",
+                          subtitle: "View your past records",
+                          color: Colors.orange,
+                          onTap: () {
+                            // Navigate to history
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        _buildMenuCard(
+                          icon: Icons.receipt_long,
+                          title: "Bills & Payments",
+                          subtitle: "Manage your payments",
+                          color: Colors.green,
+                          onTap: () {
+                            // Navigate to bills
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        _buildMenuCard(
+                          icon: Icons.medication,
+                          title: "Prescriptions",
+                          subtitle: "View your prescriptions",
+                          color: Colors.purple,
+                          onTap: () {
+                            // Navigate to prescriptions
+                          },
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
+              ),
+            ),
     );
   }
 
   Widget _buildPatientProfileCard() {
     if (_patientData == null) return SizedBox.shrink();
 
-    String fullName = "${_patientData!['firstName']} ${_patientData!['lastName']}";
+    String fullName =
+        "${_patientData!['firstName']} ${_patientData!['lastName']}";
 
     return Card(
       elevation: 8,
@@ -244,17 +258,17 @@ class _PatientHomePageState extends State<PatientHomePage> {
                         ),
                         SizedBox(height: 4),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             "ID: ${_patientData!['id']}",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white,
-                            ),
+                            style: TextStyle(fontSize: 12, color: Colors.white),
                           ),
                         ),
                       ],
@@ -262,11 +276,11 @@ class _PatientHomePageState extends State<PatientHomePage> {
                   ),
                 ],
               ),
-              
+
               SizedBox(height: 20),
               Divider(color: Colors.white.withOpacity(0.3)),
               SizedBox(height: 20),
-              
+
               // Patient Details Grid
               Row(
                 children: [
@@ -328,7 +342,9 @@ class _PatientHomePageState extends State<PatientHomePage> {
     return Container(
       width: fullWidth ? double.infinity : null,
       child: Column(
-        crossAxisAlignment: fullWidth ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment: fullWidth
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Icon(icon, color: Colors.white, size: 20),
           SizedBox(height: 4),
@@ -397,19 +413,12 @@ class _PatientHomePageState extends State<PatientHomePage> {
                     SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.grey[400],
-                size: 16,
-              ),
+              Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
             ],
           ),
         ),
