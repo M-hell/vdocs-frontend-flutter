@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import '../Appointement/ClinicAppointmentsPage.dart';
+import '../Appointement/ClinicAppointmentsPage.dart'; // Your existing page
 
 class ClinicHomePage extends StatefulWidget {
   @override
@@ -23,13 +23,11 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
   }
 
   void _initializeDio() {
-    // Get the Dio instance passed from login page
     final Dio? passedDio = ModalRoute.of(context)?.settings.arguments as Dio?;
 
     if (passedDio != null) {
       _dio = passedDio;
     } else {
-      // Create a new Dio instance with web configuration
       _dio = Dio();
       if (kIsWeb) {
         _dio.options.extra['withCredentials'] = true;
@@ -66,6 +64,32 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
         _errorMessage = "Error: $e";
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchCompletedAppointments() async {
+    try {
+      final response = await _dio.get(
+        "http://localhost:8084/api/clinic/appointments/completed",
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> appointments = response.data;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CompletedAppointmentsPage(
+              dio: _dio,
+              appointments: appointments,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to fetch appointments: $e")),
+      );
     }
   }
 
@@ -113,11 +137,8 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Clinic Information Card
                     _buildClinicInfoCard(),
                     SizedBox(height: 24),
-
-                    // Dashboard Title
                     Text(
                       "Dashboard",
                       style: TextStyle(
@@ -126,8 +147,6 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
                       ),
                     ),
                     SizedBox(height: 16),
-
-                    // Dashboard Grid
                     GridView.count(
                       shrinkWrap: true,
                       physics: NeverScrollableScrollPhysics(),
@@ -138,9 +157,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
                         _buildDashboardCard(
                           icon: Icons.people,
                           title: "Patients",
-                          onTap: () {
-                            // Navigate to patients list
-                          },
+                          onTap: _fetchCompletedAppointments,
                         ),
                         _buildDashboardCard(
                           icon: Icons.calendar_today,
@@ -153,21 +170,6 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
                                     ClinicAppointmentsPage(dio: _dio),
                               ),
                             );
-                          },
-                        ),
-
-                        _buildDashboardCard(
-                          icon: Icons.medical_services,
-                          title: "Services",
-                          onTap: () {
-                            // Navigate to services
-                          },
-                        ),
-                        _buildDashboardCard(
-                          icon: Icons.settings,
-                          title: "Settings",
-                          onTap: () {
-                            // Navigate to settings
                           },
                         ),
                       ],
@@ -208,35 +210,30 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
             SizedBox(height: 16),
             Divider(),
             SizedBox(height: 16),
-
             _buildInfoRow(
               icon: Icons.email,
               label: "Email",
               value: _clinicData!['email'] ?? 'N/A',
             ),
             SizedBox(height: 12),
-
             _buildInfoRow(
               icon: Icons.phone,
               label: "Contact",
               value: _clinicData!['contactNo'] ?? 'N/A',
             ),
             SizedBox(height: 12),
-
             _buildInfoRow(
               icon: Icons.location_on,
               label: "Address",
               value: _clinicData!['address'] ?? 'N/A',
             ),
             SizedBox(height: 12),
-
             _buildInfoRow(
               icon: Icons.calendar_today,
               label: "Created",
               value: _formatDate(_clinicData!['createdAt']),
             ),
             SizedBox(height: 12),
-
             _buildInfoRow(
               icon: Icons.update,
               label: "Last Updated",
@@ -284,7 +281,6 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
 
   String _formatDate(String? dateString) {
     if (dateString == null) return 'N/A';
-
     try {
       final DateTime date = DateTime.parse(dateString);
       return "${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
@@ -316,6 +312,79 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------- CompletedAppointmentsPage ----------------
+
+class CompletedAppointmentsPage extends StatelessWidget {
+  final Dio dio;
+  final List<dynamic> appointments;
+
+  const CompletedAppointmentsPage({
+    super.key,
+    required this.dio,
+    required this.appointments,
+  });
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'COMPLETED':
+        return Colors.green;
+      case 'PENDING':
+        return Colors.orange;
+      case 'CANCELLED':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Completed Appointments")),
+      body: ListView.builder(
+        itemCount: appointments.length,
+        itemBuilder: (context, index) {
+          final appointment = appointments[index];
+          final clinic = appointment['clinic'] ?? {};
+          final status = appointment['status'] ?? 'Unknown';
+
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              title: Text(appointment['patientName'] ?? 'Unknown'),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Clinic: ${clinic['name'] ?? 'N/A'}"),
+                  Text("Date: ${appointment['appointmentDate'] ?? 'N/A'}"),
+                  Text(
+                    "Medical Requirement: ${appointment['medicalRequirement'] ?? 'N/A'}",
+                  ),
+                  Text("Remarks: ${appointment['remarks'] ?? ''}"),
+                ],
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(status),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
