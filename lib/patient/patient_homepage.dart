@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import './report_upload_page.dart';
+import '../Appointement/BookAppointmentPage.dart';
 import './Report_history_page.dart';
 
 class PatientHomePage extends StatefulWidget {
@@ -168,16 +169,28 @@ class _PatientHomePageState extends State<PatientHomePage> {
                             );
                           },
                         ),
-                        SizedBox(height: 16),
                         _buildMenuCard(
                           icon: Icons.book_online,
                           title: "Book Appointment",
                           subtitle: "Schedule your next visit",
                           color: Colors.blue,
                           onTap: () {
-                            // Navigate to booking
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => BookAppointmentPage(
+                                  dio: _dio,
+                                  patientId: _patientData!['id'],
+                                  patientName:
+                                      "${_patientData!['firstName']} ${_patientData!['lastName']}",
+                                  patientContactNo:
+                                      _patientData!['phoneNumber'],
+                                ),
+                              ),
+                            );
                           },
                         ),
+
                         SizedBox(height: 16),
                         _buildMenuCard(
                           icon: Icons.history,
