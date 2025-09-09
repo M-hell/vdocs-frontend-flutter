@@ -43,6 +43,47 @@ dependencies:
   url_launcher: ^6.2.12
   lottie: ^2.7.0
 
+  # Minimal, modern, and consistent icon set (Lucide icons)
+  lucide_icons: ^0.257.0
+
+  # Animations & transitions (safe, official Flutter package)
+  flutter_animate: ^4.5.0
+
+  # For glassmorphism/blur effects in dark gradient theme
+  glassmorphism: ^3.0.0
+
+  # Gradient text & buttons
+  gradient_widgets: ^0.6.0
+
+  # For vector icons & SVGs (if needed for futuristic design)
+  flutter_svg: ^2.0.9
+
+  # State-safe shimmer loading placeholders
+  shimmer: ^3.0.0
+
+  # Smooth page/pageview indicators (if your app has onboarding or navigation dots)
+  smooth_page_indicator: ^1.1.0
+  # ----- Visual & theme -----
+  flex_color_scheme: ^7.3.1
+  google_fonts: ^6.2.1
+
+  # ----- Icons -----
+  fluentui_system_icons: ^1.1.216
+
+  # ----- Motion -----
+  animations: ^2.0.8
+  simple_animations: ^5.0.2
+
+  # ----- Layout helpers -----
+  gap: ^3.0.1
+  auto_size_text: ^3.0.0
+
+  # ----- Misc -----
+  flutter_spinkit: ^5.2.0
+  flutter_blurhash: ^0.7.0
+  cached_network_image: ^3.3.1
+  iconsax: ^0.0.8
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

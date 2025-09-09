@@ -5,6 +5,8 @@ import 'clinic/clinic_homepage.dart';
 import 'patient/patient_login_page.dart';
 import 'patient/patient_homepage.dart';
 import 'patient/report_upload_page.dart';
+import 'patient/patient_register.dart';
+import 'clinic/clinic_register.dart';
 
 void main() {
   runApp(MyApp());
@@ -24,6 +26,8 @@ class MyApp extends StatelessWidget {
         '/patient-login': (context) => PatientLoginPage(),
         '/patient-home': (context) => PatientHomePage(),
         '/uploadReport': (context) => ReportUploadPage(),
+        '/patient-register': (context) => PatientRegisterPage(),
+        '/clinic-register': (context) => ClinicRegisterPage(),
       },
     );
   }

@@ -48,9 +48,9 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       setState(() {
         isLoading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to load clinics')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load clinics')),
+      );
     }
   }
 
@@ -117,68 +117,104 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Book Appointment')),
+      appBar: AppBar(
+        title: const Text('Book Appointment'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.green[700],
+        elevation: 1,
+      ),
+      backgroundColor: Colors.white,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  DropdownButtonFormField<dynamic>(
-                    decoration: const InputDecoration(
-                      labelText: 'Select Clinic',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: clinics
-                        .map(
-                          (clinic) => DropdownMenuItem(
-                            value: clinic,
-                            child: Text(clinic['name']),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedClinic = value;
-                      });
-                    },
-                    value: selectedClinic,
-                  ),
+                  _buildDropdownField(),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      labelText: selectedDate == null
-                          ? 'Pick Appointment Date & Time'
-                          : 'Appointment: ${DateFormat('yyyy-MM-dd – HH:mm').format(selectedDate!)}',
-                      border: const OutlineInputBorder(),
-                    ),
-                    onTap: pickDate,
-                  ),
+                  _buildDatePickerField(),
                   const SizedBox(height: 16),
-                  TextField(
+                  _buildTextField(
                     controller: _medicalRequirementController,
-                    decoration: const InputDecoration(
-                      labelText: 'Medical Requirement',
-                      border: OutlineInputBorder(),
-                    ),
+                    label: 'Medical Requirement',
+                    icon: Icons.medical_services,
                   ),
                   const SizedBox(height: 16),
-                  TextField(
+                  _buildTextField(
                     controller: _reportUrlController,
-                    decoration: const InputDecoration(
-                      labelText: 'Report URL (optional)',
-                      border: OutlineInputBorder(),
-                    ),
+                    label: 'Report URL (optional)',
+                    icon: Icons.upload_file,
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: submitAppointment,
-                    child: const Text('Book Appointment'),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: submitAppointment,
+                      icon: const Icon(Icons.book_online),
+                      label: const Text('Book Appointment'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[700],
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: const TextStyle(fontSize: 16),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildDropdownField() {
+    return DropdownButtonFormField<dynamic>(
+      decoration: InputDecoration(
+        labelText: 'Select Clinic',
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.local_hospital),
+      ),
+      items: clinics
+          .map(
+            (clinic) => DropdownMenuItem(
+              value: clinic,
+              child: Text(clinic['name']),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        setState(() {
+          selectedClinic = value;
+        });
+      },
+      value: selectedClinic,
+    );
+  }
+
+  Widget _buildDatePickerField() {
+    return TextFormField(
+      readOnly: true,
+      decoration: InputDecoration(
+        labelText: selectedDate == null
+            ? 'Pick Appointment Date & Time'
+            : 'Appointment: ${DateFormat('yyyy-MM-dd – HH:mm').format(selectedDate!)}',
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.calendar_today),
+      ),
+      onTap: pickDate,
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        prefixIcon: Icon(icon),
+      ),
     );
   }
 }

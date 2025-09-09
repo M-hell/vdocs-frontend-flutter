@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_fonts/google_fonts.dart';
+import 'package:iconsax/iconsax.dart';
 
 class ClinicLoginPage extends StatefulWidget {
   @override
@@ -22,8 +24,6 @@ class _ClinicLoginPageState extends State<ClinicLoginPage> {
 
   void _initializeDio() {
     _dio = Dio();
-    
-    // Configure for web to handle cookies automatically
     if (kIsWeb) {
       _dio.options.extra['withCredentials'] = true;
     }
@@ -45,11 +45,10 @@ class _ClinicLoginPageState extends State<ClinicLoginPage> {
       );
 
       if (response.statusCode == 200) {
-        // For web, cookies are automatically managed by the browser
         Navigator.pushReplacementNamed(
           context,
           '/clinic-home',
-          arguments: _dio, // Pass the dio instance instead
+          arguments: _dio,
         );
       } else {
         setState(() {
@@ -70,47 +69,165 @@ class _ClinicLoginPageState extends State<ClinicLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Clinic Login")),
+      backgroundColor: Colors.grey[900],
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          "Clinic Login",
+          style: GoogleFonts.nunito(
+            fontWeight: FontWeight.w600,
+            fontSize: 22,
+            color: Colors.white,
+          ),
+        ),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: "Email",
-                border: OutlineInputBorder(),
+        padding: const EdgeInsets.all(24.0),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Card(
+              color: Colors.grey[850],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              keyboardType: TextInputType.emailAddress,
+              elevation: 6,
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    // Logo
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Iconsax.hospital, size: 50, color: Colors.blue),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Heading
+                    Text(
+                      "Welcome Back",
+                      style: GoogleFonts.nunito(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+
+                    // Email
+                    TextField(
+                      controller: _emailController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.email_outlined, color: Colors.white70),
+                        labelText: "Email",
+                        labelStyle: const TextStyle(color: Colors.white70),
+                        filled: true,
+                        fillColor: Colors.grey[800],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Password
+                    TextField(
+                      controller: _passwordController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                        labelText: "Password",
+                        labelStyle: const TextStyle(color: Colors.white70),
+                        filled: true,
+                        fillColor: Colors.grey[800],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Login Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _login,
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Iconsax.login, color: Colors.white),
+                        label: Text(
+                          _isLoading ? "Logging in..." : "Login",
+                          style: GoogleFonts.nunito(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Register Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/clinic-register');
+                        },
+                        icon: const Icon(Iconsax.user_add, color: Colors.white70),
+                        label: Text(
+                          "Not Registered? Register Now",
+                          style: GoogleFonts.roboto(color: Colors.white70),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.white70),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Error Message
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        _errorMessage!,
+                        style: GoogleFonts.roboto(
+                          color: Colors.red,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-            SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: "Password",
-                border: OutlineInputBorder(),
-              ),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _login,
-                child: _isLoading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Text("Login"),
-              ),
-            ),
-            if (_errorMessage != null) ...[
-              SizedBox(height: 20),
-              Text(
-                _errorMessage!,
-                style: TextStyle(color: Colors.red),
-              ),
-            ]
-          ],
+          ),
         ),
       ),
     );

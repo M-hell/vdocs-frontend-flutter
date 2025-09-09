@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import '../Appointement/ClinicAppointmentsPage.dart'; // Your existing page
+import '../Appointement/ClinicAppointmentsPage.dart';
 
 class ClinicHomePage extends StatefulWidget {
   @override
@@ -17,22 +17,13 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeDio();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeDio());
   }
 
   void _initializeDio() {
     final Dio? passedDio = ModalRoute.of(context)?.settings.arguments as Dio?;
-
-    if (passedDio != null) {
-      _dio = passedDio;
-    } else {
-      _dio = Dio();
-      if (kIsWeb) {
-        _dio.options.extra['withCredentials'] = true;
-      }
-    }
+    _dio = passedDio ??
+        Dio()..options.extra['withCredentials'] = kIsWeb ? true : null;
 
     _fetchClinicData();
   }
@@ -44,9 +35,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
         _errorMessage = null;
       });
 
-      final response = await _dio.get(
-        "http://localhost:8084/api/clinic/auth/me",
-      );
+      final response = await _dio.get("http://localhost:8084/api/clinic/auth/me");
 
       if (response.statusCode == 200) {
         setState(() {
@@ -69,9 +58,7 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
 
   Future<void> _fetchCompletedAppointments() async {
     try {
-      final response = await _dio.get(
-        "http://localhost:8084/api/clinic/appointments/completed",
-      );
+      final response = await _dio.get("http://localhost:8084/api/clinic/appointments/completed");
 
       if (response.statusCode == 200) {
         final List<dynamic> appointments = response.data;
@@ -96,88 +83,80 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[900],
       appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 141, 130, 130),
         title: Text("Clinic Dashboard"),
         actions: [
+          IconButton(icon: Icon(Icons.refresh), onPressed: _fetchClinicData),
           IconButton(
             icon: Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-            },
+            onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false),
           ),
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: Colors.blueAccent))
           : _errorMessage != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, size: 64, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text(
-                    _errorMessage!,
-                    style: TextStyle(color: Colors.red, fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _fetchClinicData,
-                    child: Text("Retry"),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _fetchClinicData,
-              child: SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildClinicInfoCard(),
-                    SizedBox(height: 24),
-                    Text(
-                      "Dashboard",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
+              ? _buildErrorView()
+              : RefreshIndicator(
+                  onRefresh: _fetchClinicData,
+                  child: SingleChildScrollView(
+                    physics: AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDashboardCard(
-                          icon: Icons.people,
-                          title: "Patients",
-                          onTap: _fetchCompletedAppointments,
+                        _buildClinicInfoCard(),
+                        SizedBox(height: 24),
+                        Text(
+                          "Dashboard",
+                          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
-                        _buildDashboardCard(
-                          icon: Icons.calendar_today,
-                          title: "Appointments",
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ClinicAppointmentsPage(dio: _dio),
+                        SizedBox(height: 16),
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          children: [
+                            _buildDashboardCard(
+                              icon: Icons.people,
+                              title: "Patients",
+                              onTap: _fetchCompletedAppointments,
+                            ),
+                            _buildDashboardCard(
+                              icon: Icons.calendar_today,
+                              title: "Appointments",
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ClinicAppointmentsPage(dio: _dio),
+                                ),
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error, size: 64, color: Colors.red),
+          SizedBox(height: 16),
+          Text(_errorMessage!, style: TextStyle(color: Colors.red, fontSize: 16), textAlign: TextAlign.center),
+          SizedBox(height: 16),
+          ElevatedButton(onPressed: _fetchClinicData, child: Text("Retry")),
+        ],
+      ),
     );
   }
 
@@ -185,7 +164,9 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
     if (_clinicData == null) return SizedBox.shrink();
 
     return Card(
-      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.grey[850],
+      elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -193,85 +174,47 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
           children: [
             Row(
               children: [
-                Icon(Icons.local_hospital, size: 32, color: Colors.blue),
+                Icon(Icons.local_hospital, size: 32, color: Colors.blueAccent),
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _clinicData!['name'] ?? 'Unknown Clinic',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[800],
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue[400]),
                   ),
                 ),
               ],
             ),
             SizedBox(height: 16),
-            Divider(),
+            Divider(color: Colors.white24),
             SizedBox(height: 16),
-            _buildInfoRow(
-              icon: Icons.email,
-              label: "Email",
-              value: _clinicData!['email'] ?? 'N/A',
-            ),
+            _buildInfoRow(Icons.email, "Email", _clinicData!['email'] ?? 'N/A'),
             SizedBox(height: 12),
-            _buildInfoRow(
-              icon: Icons.phone,
-              label: "Contact",
-              value: _clinicData!['contactNo'] ?? 'N/A',
-            ),
+            _buildInfoRow(Icons.phone, "Contact", _clinicData!['contactNo'] ?? 'N/A'),
             SizedBox(height: 12),
-            _buildInfoRow(
-              icon: Icons.location_on,
-              label: "Address",
-              value: _clinicData!['address'] ?? 'N/A',
-            ),
+            _buildInfoRow(Icons.location_on, "Address", _clinicData!['address'] ?? 'N/A'),
             SizedBox(height: 12),
-            _buildInfoRow(
-              icon: Icons.calendar_today,
-              label: "Created",
-              value: _formatDate(_clinicData!['createdAt']),
-            ),
+            _buildInfoRow(Icons.calendar_today, "Created", _formatDate(_clinicData!['createdAt'])),
             SizedBox(height: 12),
-            _buildInfoRow(
-              icon: Icons.update,
-              label: "Last Updated",
-              value: _formatDate(_clinicData!['updatedAt']),
-            ),
+            _buildInfoRow(Icons.update, "Last Updated", _formatDate(_clinicData!['updatedAt'])),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
+  Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
+        Icon(icon, size: 20, color: Colors.grey[400]),
         SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[400], fontWeight: FontWeight.w500)),
               SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
+              Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
             ],
           ),
         ),
@@ -289,26 +232,22 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
     }
   }
 
-  Widget _buildDashboardCard({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildDashboardCard({required IconData icon, required String title, required VoidCallback onTap}) {
     return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.grey[850],
       elevation: 4,
       child: InkWell(
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 48, color: Colors.blue),
+              Icon(icon, size: 48, color: Colors.blueAccent),
               SizedBox(height: 16),
-              Text(
-                title,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
             ],
           ),
         ),
@@ -317,26 +256,20 @@ class _ClinicHomePageState extends State<ClinicHomePage> {
   }
 }
 
-// ---------------- CompletedAppointmentsPage ----------------
-
 class CompletedAppointmentsPage extends StatelessWidget {
   final Dio dio;
   final List<dynamic> appointments;
 
-  const CompletedAppointmentsPage({
-    super.key,
-    required this.dio,
-    required this.appointments,
-  });
+  const CompletedAppointmentsPage({super.key, required this.dio, required this.appointments});
 
   Color _getStatusColor(String status) {
     switch (status) {
       case 'COMPLETED':
-        return Colors.green;
+        return Colors.greenAccent;
       case 'PENDING':
-        return Colors.orange;
+        return Colors.orangeAccent;
       case 'CANCELLED':
-        return Colors.red;
+        return Colors.redAccent;
       default:
         return Colors.grey;
     }
@@ -345,39 +278,51 @@ class CompletedAppointmentsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Completed Appointments")),
+      backgroundColor: Colors.grey[900],
+      appBar: AppBar(
+        title: Text("Completed Appointments"),
+        backgroundColor: const Color.fromARGB(255, 141, 130, 130),
+      ),
       body: ListView.builder(
         itemCount: appointments.length,
+        padding: const EdgeInsets.all(12),
         itemBuilder: (context, index) {
           final appointment = appointments[index];
           final clinic = appointment['clinic'] ?? {};
           final status = appointment['status'] ?? 'Unknown';
 
           return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: Colors.grey[850],
+            elevation: 3,
+            margin: const EdgeInsets.symmetric(vertical: 6),
             child: ListTile(
-              title: Text(appointment['patientName'] ?? 'Unknown'),
+              contentPadding: EdgeInsets.all(16),
+              title: Text(
+                appointment['patientName'] ?? 'Unknown',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+              ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Clinic: ${clinic['name'] ?? 'N/A'}"),
-                  Text("Date: ${appointment['appointmentDate'] ?? 'N/A'}"),
-                  Text(
-                    "Medical Requirement: ${appointment['medicalRequirement'] ?? 'N/A'}",
-                  ),
-                  Text("Remarks: ${appointment['remarks'] ?? ''}"),
+                  SizedBox(height: 4),
+                  Text("Clinic: ${clinic['name'] ?? 'N/A'}", style: TextStyle(color: Colors.white70)),
+                  Text("Date: ${appointment['appointmentDate'] ?? 'N/A'}", style: TextStyle(color: Colors.white70)),
+                  Text("Requirement: ${appointment['medicalRequirement'] ?? 'N/A'}", style: TextStyle(color: Colors.white70)),
+                  if ((appointment['remarks'] ?? '').isNotEmpty)
+                    Text("Remarks: ${appointment['remarks']}", style: TextStyle(color: Colors.white70)),
                 ],
               ),
               trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(status),
+                  color: _getStatusColor(status).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   status,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: _getStatusColor(status),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
