@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
 
 class ClinicAppointmentDetailPage extends StatefulWidget {
   final Dio dio;
@@ -21,6 +22,7 @@ class _ClinicAppointmentDetailPageState
     extends State<ClinicAppointmentDetailPage> {
   Map<String, dynamic>? appointment;
   bool isLoading = true;
+  bool isUploading = false;
   String? errorMessage;
 
   final TextEditingController _remarksController = TextEditingController();
@@ -53,6 +55,70 @@ class _ClinicAppointmentDetailPageState
         errorMessage = "Failed to load appointment details: $e";
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> pickAndUploadFile() async {
+    try {
+      // Pick file
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result != null && result.files.single.bytes != null) {
+        setState(() {
+          isUploading = true;
+        });
+
+        // Create FormData
+        FormData formData = FormData.fromMap({
+          "file": MultipartFile.fromBytes(
+            result.files.single.bytes!,
+            filename: result.files.single.name,
+          ),
+        });
+
+        // Upload to server
+        final response = await widget.dio.post(
+          "http://localhost:8084/api/clinic/appointments/upload-report/${widget.appointmentId}",
+          data: formData,
+        );
+
+        if (!mounted) return;
+        
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Report uploaded successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Refresh appointment details to get updated clinic report URL
+          fetchAppointmentDetail();
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No file selected'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload file: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isUploading = false;
+        });
+      }
     }
   }
 
@@ -229,6 +295,66 @@ class _ClinicAppointmentDetailPageState
                         ),
                       ),
 
+                      // File Upload Section
+                      Card(
+                        color: const Color(0xFF1E1E1E),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Upload Clinic Report",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: isUploading ? null : pickAndUploadFile,
+                                  icon: isUploading 
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : const Icon(Icons.upload_file),
+                                  label: Text(isUploading ? "Uploading..." : "Select & Upload File"),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    backgroundColor: Colors.greenAccent,
+                                    foregroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Supported formats: PDF, DOC, DOCX, JPG, JPEG, PNG",
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
                       // Remarks
                       TextField(
                         controller: _remarksController,
@@ -254,12 +380,12 @@ class _ClinicAppointmentDetailPageState
                       ),
                       const SizedBox(height: 16),
 
-                      // Clinic Report
+                      // Clinic Report URL (Read-only)
                       TextField(
                         controller: _clinicReportController,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: Colors.white70),
                         decoration: InputDecoration(
-                          labelText: 'Clinic Report URL',
+                          labelText: 'Clinic Report URL (Auto-generated)',
                           labelStyle: const TextStyle(color: Colors.white70),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -275,6 +401,7 @@ class _ClinicAppointmentDetailPageState
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
+                        readOnly: true,
                       ),
                       const SizedBox(height: 16),
 
