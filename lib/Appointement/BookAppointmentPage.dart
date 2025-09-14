@@ -22,8 +22,11 @@ class BookAppointmentPage extends StatefulWidget {
 
 class _BookAppointmentPageState extends State<BookAppointmentPage> {
   List<dynamic> clinics = [];
+  List<dynamic> patientReports = [];
   bool isLoading = true;
+  bool isLoadingReports = false;
   dynamic selectedClinic;
+  dynamic selectedReport;
   DateTime? selectedDate;
   final TextEditingController _medicalRequirementController =
       TextEditingController();
@@ -32,7 +35,12 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   @override
   void initState() {
     super.initState();
-    fetchClinics();
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    await fetchClinics();
+    await fetchPatientReports();
   }
 
   Future<void> fetchClinics() async {
@@ -40,17 +48,53 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       final response = await widget.dio.get(
         'http://localhost:8084/api/clinic/auth/all',
       );
-      setState(() {
-        clinics = response.data;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          clinics = response.data ?? [];
+          isLoading = false;
+        });
+      }
     } catch (e) {
+      if (mounted) {
+        setState(() {
+          clinics = [];
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load clinics: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> fetchPatientReports() async {
+    if (mounted) {
       setState(() {
-        isLoading = false;
+        isLoadingReports = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load clinics')),
+    }
+
+    try {
+      final response = await widget.dio.get(
+        'http://localhost:8084/api/patient/reports/patient/${widget.patientId}',
       );
+      
+      if (mounted) {
+        setState(() {
+          patientReports = response.data ?? [];
+          isLoadingReports = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          patientReports = [];
+          isLoadingReports = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load reports: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -77,14 +121,18 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
         'http://localhost:8084/api/clinic/appointments/create',
         data: body,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appointment booked successfully')),
-      );
-      Navigator.pop(context, response.data);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Appointment booked successfully')),
+        );
+        Navigator.pop(context, response.data);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to book appointment')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to book appointment: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -95,12 +143,12 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (date != null) {
+    if (date != null && mounted) {
       final time = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
       );
-      if (time != null) {
+      if (time != null && mounted) {
         setState(() {
           selectedDate = DateTime(
             date.year,
@@ -140,9 +188,11 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                     icon: Icons.medical_services,
                   ),
                   const SizedBox(height: 16),
+                  _buildReportDropdown(),
+                  const SizedBox(height: 16),
                   _buildTextField(
                     controller: _reportUrlController,
-                    label: 'Report URL (optional)',
+                    label: 'Report URL (Auto-filled or manual)',
                     icon: Icons.upload_file,
                   ),
                   const SizedBox(height: 24),
@@ -165,27 +215,137 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     );
   }
 
-  Widget _buildDropdownField() {
-    return DropdownButtonFormField<dynamic>(
-      decoration: InputDecoration(
-        labelText: 'Select Clinic',
-        border: const OutlineInputBorder(),
-        prefixIcon: const Icon(Icons.local_hospital),
-      ),
-      items: clinics
-          .map(
-            (clinic) => DropdownMenuItem(
-              value: clinic,
-              child: Text(clinic['name']),
+  Widget _buildReportDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.folder, color: Colors.blue),
+            const SizedBox(width: 8),
+            const Text(
+              'Select Patient Report (Optional)',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            if (isLoadingReports)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        
+        if (patientReports.isEmpty && !isLoadingReports)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: const Text(
+              'No reports found for this patient',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
             ),
           )
-          .toList(),
+        else if (!isLoadingReports && patientReports.isNotEmpty)
+          DropdownButtonFormField<dynamic>(
+            decoration: const InputDecoration(
+              labelText: 'Choose Report',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.description),
+            ),
+            value: selectedReport,
+            isExpanded: true,
+            items: [
+              const DropdownMenuItem<dynamic>(
+                value: null,
+                child: Text('Select a report...'),
+              ),
+              ...patientReports.map<DropdownMenuItem<dynamic>>((report) {
+                final fileName = report['originalName'] ?? 'Unknown File';
+                final category = report['category'] ?? 'No Category';
+                final uploadDate = report['uploadedAt'] != null 
+                    ? DateFormat('MMM dd, yyyy').format(DateTime.parse(report['uploadedAt']))
+                    : 'Unknown Date';
+                final hasUrl = report['fileUrl'] != null && report['fileUrl'].toString().isNotEmpty;
+                
+                return DropdownMenuItem<dynamic>(
+                  value: report,
+                  enabled: hasUrl,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        fileName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: hasUrl ? Colors.black : Colors.grey,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        category,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: hasUrl ? Colors.grey[600] : Colors.grey[400],
+                        ),
+                      ),
+                      Text(
+                        uploadDate + (hasUrl ? '' : ' (No URL)'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: hasUrl ? Colors.grey[500] : Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+            onChanged: (value) {
+              setState(() {
+                selectedReport = value;
+                if (value != null && value['fileUrl'] != null) {
+                  _reportUrlController.text = value['fileUrl'].toString();
+                } else if (value == null) {
+                  _reportUrlController.clear();
+                }
+              });
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField() {
+    return DropdownButtonFormField<dynamic>(
+      decoration: const InputDecoration(
+        labelText: 'Select Clinic',
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.local_hospital),
+      ),
+      value: selectedClinic,
+      items: clinics.map<DropdownMenuItem<dynamic>>((clinic) {
+        return DropdownMenuItem<dynamic>(
+          value: clinic,
+          child: Text(clinic['name']?.toString() ?? 'Unknown Clinic'),
+        );
+      }).toList(),
       onChanged: (value) {
         setState(() {
           selectedClinic = value;
         });
       },
-      value: selectedClinic,
     );
   }
 
