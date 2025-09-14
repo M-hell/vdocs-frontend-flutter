@@ -41,19 +41,24 @@ class _ReportHistoryPageState extends State<ReportHistoryPage> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to load reports')));
+      ).showSnackBar(const SnackBar(content: Text('Failed to load reports')));
     }
   }
 
-  Future<void> openReport(String fileName) async {
-    final url =
-        'http://localhost:8084/uploads/$fileName'; // Assuming files are served from this path
-    if (await canLaunch(url)) {
-      await launch(url);
+  Future<void> openReport(Map<String, dynamic> report) async {
+    // If blob url available, use that
+    final String url =
+        report['fileUrl'] ??
+        "http://localhost:8084/uploads/${report['fileName']}";
+
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Cannot open report')));
+      ).showSnackBar(const SnackBar(content: Text('Cannot open report')));
     }
   }
 
@@ -74,9 +79,13 @@ class _ReportHistoryPageState extends State<ReportHistoryPage> {
                 return Card(
                   elevation: 3,
                   child: ListTile(
-                    leading: const Icon(
-                      Icons.picture_as_pdf,
-                      color: Colors.red,
+                    leading: Icon(
+                      report['fileType'] == "application/pdf"
+                          ? Icons.picture_as_pdf
+                          : Icons.image,
+                      color: report['fileType'] == "application/pdf"
+                          ? Colors.red
+                          : Colors.blue,
                     ),
                     title: Text(report['originalName'] ?? 'Unknown'),
                     subtitle: Text(
@@ -86,7 +95,7 @@ class _ReportHistoryPageState extends State<ReportHistoryPage> {
                     isThreeLine: true,
                     trailing: IconButton(
                       icon: const Icon(Icons.open_in_new),
-                      onPressed: () => openReport(report['fileName']),
+                      onPressed: () => openReport(report),
                     ),
                   ),
                 );
