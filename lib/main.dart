@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'core/theme/app_theme.dart';
 import 'login_page.dart';
 import 'clinic/clinic_login_page.dart';
 import 'clinic/clinic_homepage.dart';
@@ -16,8 +17,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Medical App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      title: 'VDocs - Medical Services',
+      theme: AppTheme.lightTheme,
+      debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
         '/': (context) => LoginPage(),

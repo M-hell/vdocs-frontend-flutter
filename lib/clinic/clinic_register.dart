@@ -62,7 +62,7 @@ class _ClinicRegisterPageState extends State<ClinicRegisterPage> {
 
     try {
       final response = await _dio.post(
-        "http://localhost:8084/api/clinic/auth/register",
+        "http://localhost:8080/api/clinic/auth/register",
         data: {
           "name": _clinicNameController.text,
           "email": _emailController.text,

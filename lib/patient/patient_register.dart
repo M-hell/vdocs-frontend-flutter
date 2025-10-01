@@ -65,7 +65,7 @@ class _PatientRegisterPageState extends State<PatientRegisterPage> {
 
     try {
       final response = await _dio.post(
-        "http://localhost:8084/api/patient/auth/register",
+        "http://localhost:8080/api/patient/auth/register",
         data: {
           "firstName": _firstNameController.text,
           "lastName": _lastNameController.text,

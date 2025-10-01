@@ -29,7 +29,7 @@ class _ReportHistoryPageState extends State<ReportHistoryPage> {
   Future<void> fetchReports() async {
     try {
       final response = await widget.dio.get(
-        'http://localhost:8084/api/patient/reports/patient/${widget.patientId}',
+        'http://localhost:8080/api/patient/reports/patient/${widget.patientId}',
       );
       setState(() {
         reports = response.data;
@@ -49,7 +49,7 @@ class _ReportHistoryPageState extends State<ReportHistoryPage> {
     // If blob url available, use that
     final String url =
         report['fileUrl'] ??
-        "http://localhost:8084/uploads/${report['fileName']}";
+        "http://localhost:8080/uploads/${report['fileName']}";
 
     final uri = Uri.parse(url);
 

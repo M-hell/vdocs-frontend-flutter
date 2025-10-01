@@ -62,7 +62,7 @@ class _ReportUploadPageState extends State<ReportUploadPage> {
       });
 
       final response = await _dio.post(
-        "http://localhost:8084/api/patient/reports/upload",
+        "http://localhost:8080/api/patient/reports/upload",
         data: formData,
       );
 

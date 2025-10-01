@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:gap/gap.dart';
+import 'core/theme/app_theme.dart';
+import 'core/widgets/custom_widgets.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -8,126 +11,189 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900], // consistent dark bg
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          "Medical App",
-          style: GoogleFonts.nunito(
-            fontWeight: FontWeight.w600,
-            fontSize: 22,
-            color: Colors.white,
+      backgroundColor: AppTheme.lightGrey,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const Gap(40),
+              
+              // Header Section
+              AnimationConfiguration.staggeredList(
+                position: 0,
+                child: SlideAnimation(
+                  verticalOffset: 50.0,
+                  child: FadeInAnimation(
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Iconsax.hospital,
+                            size: 48,
+                            color: AppTheme.white,
+                          ),
+                        ),
+                        const Gap(24),
+                        Text(
+                          'VDocs',
+                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                        const Gap(8),
+                        Text(
+                          'Your Digital Health Companion',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: AppTheme.textLight,
+                          ),
+                        ),
+                        const Gap(8),
+                        Text(
+                          'Select your login type to continue',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              const Gap(48),
+              
+              // Login Options
+              AnimationConfiguration.staggeredList(
+                position: 1,
+                child: SlideAnimation(
+                  verticalOffset: 50.0,
+                  child: FadeInAnimation(
+                    child: Column(
+                      children: [
+                        // Patient Login Card
+                        ActionCard(
+                          icon: Iconsax.user,
+                          title: 'Patient Login',
+                          subtitle: 'Access your health records and appointments',
+                          iconColor: AppTheme.primaryBlue,
+                          onTap: () {
+                            Navigator.pushNamed(context, '/patient-login');
+                          },
+                        ),
+                        
+                        const Gap(16),
+                        
+                        // Clinic Login Card
+                        ActionCard(
+                          icon: Iconsax.hospital,
+                          title: 'Clinic Login',
+                          subtitle: 'Manage appointments and patient records',
+                          iconColor: AppTheme.success,
+                          onTap: () {
+                            Navigator.pushNamed(context, '/clinic-login');
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              const Gap(48),
+              
+              // Features Section
+              AnimationConfiguration.staggeredList(
+                position: 2,
+                child: SlideAnimation(
+                  verticalOffset: 50.0,
+                  child: FadeInAnimation(
+                    child: CustomCard(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Why Choose VDocs?',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                          const Gap(16),
+                          _buildFeature(
+                            context,
+                            Iconsax.shield_tick,
+                            'Secure & Private',
+                            'Your data is protected with industry-standard security',
+                          ),
+                          const Gap(12),
+                          _buildFeature(
+                            context,
+                            Iconsax.clock,
+                            '24/7 Access',
+                            'Access your health information anytime, anywhere',
+                          ),
+                          const Gap(12),
+                          _buildFeature(
+                            context,
+                            Iconsax.document,
+                            'Digital Records',
+                            'Keep all your medical records in one place',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "Welcome",
-              style: GoogleFonts.nunito(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "Please select your login type:",
-              style: GoogleFonts.roboto(
-                fontSize: 16,
-                color: Colors.white70,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 40),
-
-            // Clinic Card
-            _buildLoginCard(
-              context: context,
-              icon: Iconsax.hospital,
-              title: "Clinic Login",
-              subtitle: "For doctors and staff",
-              color: Colors.blue,
-              onTap: () => Navigator.pushNamed(context, '/clinic-login'),
-            ),
-            const SizedBox(height: 20),
-
-            // Patient Card
-            _buildLoginCard(
-              context: context,
-              icon: Iconsax.user,
-              title: "Patient Login",
-              subtitle: "For patients and users",
-              color: Colors.green,
-              onTap: () => Navigator.pushNamed(context, '/patient-login'),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildLoginCard({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      color: Colors.grey[850],
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
+  Widget _buildFeature(BuildContext context, IconData icon, String title, String subtitle) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: AppTheme.primaryBlue,
+            size: 20,
+          ),
+        ),
+        const Gap(12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, size: 28, color: color),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.nunito(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.roboto(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textLight,
+                ),
+              ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 }

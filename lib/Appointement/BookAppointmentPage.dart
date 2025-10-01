@@ -46,7 +46,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   Future<void> fetchClinics() async {
     try {
       final response = await widget.dio.get(
-        'http://localhost:8084/api/clinic/auth/all',
+        'http://localhost:8080/api/clinic/auth/all',
       );
       if (mounted) {
         setState(() {
@@ -76,7 +76,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
     try {
       final response = await widget.dio.get(
-        'http://localhost:8084/api/patient/reports/patient/${widget.patientId}',
+        'http://localhost:8080/api/patient/reports/patient/${widget.patientId}',
       );
       
       if (mounted) {
@@ -118,7 +118,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
     try {
       final response = await widget.dio.post(
-        'http://localhost:8084/api/clinic/appointments/create',
+        'http://localhost:8080/api/clinic/appointments/create',
         data: body,
       );
       if (mounted) {
