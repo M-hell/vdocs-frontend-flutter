@@ -25,6 +25,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
   PageController _healthTipsController = PageController();
   int _currentTipIndex = 0;
   Timer? _carouselTimer;
+  int _selectedBottomNavIndex = 0;
   
   // Health tips data
   final List<Map<String, dynamic>> _healthTips = [
@@ -944,22 +945,349 @@ class _PatientHomePageState extends State<PatientHomePage> {
     return Scaffold(
       backgroundColor: AppTheme.lightGrey,
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
+        child: _buildCurrentPage(),
+      ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildCurrentPage() {
+    switch (_selectedBottomNavIndex) {
+      case 0:
+        return _buildHomePage();
+      case 1:
+        return _buildClinicsPage();
+      case 2:
+        return _buildBookAppointmentPage();
+      case 3:
+        return _buildProfilePage();
+      default:
+        return _buildHomePage();
+    }
+  }
+
+  Widget _buildHomePage() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          _buildHeader(),
+          const Gap(24),
+          _buildHealthTips(),
+          const Gap(24),
+          _buildQuickStats(),
+          const Gap(24),
+          _buildNearbyDoctors(),
+          const Gap(24),
+          _buildQuickActions(),
+          const Gap(100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClinicsPage() {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          gradient: AppTheme.primaryGradient,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryBlue.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Iconsax.hospital,
+                size: 64,
+                color: AppTheme.white,
+              ),
+            ),
+            const Gap(24),
+            Text(
+              'Clinics Directory',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: AppTheme.white,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const Gap(12),
+            Text(
+              'Coming Soon!',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppTheme.white.withOpacity(0.9),
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const Gap(8),
+            Text(
+              'We\'re working on bringing you a comprehensive directory of clinics in your area.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.white.withOpacity(0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookAppointmentPage() {
+    if (_patientData == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return BookAppointmentPage(
+      dio: _dio,
+      patientId: _patientData!['id'],
+      patientName: '${_patientData!['firstName']} ${_patientData!['lastName']}',
+      patientContactNo: _patientData!['phoneNumber'] ?? '',
+    );
+  }
+
+  Widget _buildProfilePage() {
+    if (_patientData == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // Profile Header
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryBlue.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: AppTheme.white.withOpacity(0.2),
+                  backgroundImage: const NetworkImage(
+                    'https://images.unsplash.com/photo-1494790108755-2616b69ee45c?w=150&h=150&fit=crop&crop=face',
+                  ),
+                  onBackgroundImageError: (_, __) {},
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.white, width: 3),
+                    ),
+                  ),
+                ),
+                const Gap(16),
+                Text(
+                  '${_patientData!['firstName'] ?? ''} ${_patientData!['lastName'] ?? ''}',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppTheme.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const Gap(8),
+                Text(
+                  _patientData!['email'] ?? '',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.white.withOpacity(0.8),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          const Gap(24),
+
+          // Profile Details
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildProfileRow('Age', '${_patientData!['age'] ?? 'N/A'} years', Iconsax.calendar),
+                const Gap(16),
+                const Divider(),
+                const Gap(16),
+                _buildProfileRow('Gender', _patientData!['gender'] ?? 'N/A', Iconsax.user),
+                const Gap(16),
+                const Divider(),
+                const Gap(16),
+                _buildProfileRow('Phone', _patientData!['phoneNumber'] ?? 'N/A', Iconsax.call),
+                const Gap(16),
+                const Divider(),
+                const Gap(16),
+                _buildProfileRow('Address', _patientData!['address'] ?? 'N/A', Iconsax.location),
+                if (_patientData!['medicalHistory'] != null && 
+                    _patientData!['medicalHistory'].toString().isNotEmpty) ...[
+                  const Gap(16),
+                  const Divider(),
+                  const Gap(16),
+                  _buildProfileRow('Medical History', _patientData!['medicalHistory'], Iconsax.health),
+                ],
+              ],
+            ),
+          ),
+          const Gap(24),
+
+          // Action Buttons
+          ElevatedButton.icon(
+            onPressed: () {
+              // Edit profile functionality
+            },
+            icon: const Icon(Iconsax.edit),
+            label: const Text('Edit Profile'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: AppTheme.white,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const Gap(12),
+          OutlinedButton.icon(
+            onPressed: _showLogoutDialog,
+            icon: const Icon(Iconsax.logout),
+            label: const Text('Logout'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.error,
+              side: const BorderSide(color: AppTheme.error),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const Gap(100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildHeader(),
-              const Gap(24),
-              _buildHealthTips(),
-              const Gap(24),
-              _buildQuickStats(),
-              const Gap(24),
-              _buildNearbyDoctors(),
-              const Gap(24),
-              _buildQuickActions(),
-              const Gap(100),
+              _buildNavItem(
+                icon: Iconsax.home,
+                activeIcon: Iconsax.home_15,
+                label: 'Home',
+                index: 0,
+              ),
+              _buildNavItem(
+                icon: Iconsax.hospital,
+                activeIcon: Iconsax.hospital5,
+                label: 'Clinics',
+                index: 1,
+              ),
+              _buildNavItem(
+                icon: Iconsax.calendar_add,
+                activeIcon: Iconsax.calendar_add5,
+                label: 'Book',
+                index: 2,
+              ),
+              _buildNavItem(
+                icon: Iconsax.user,
+                activeIcon: Iconsax.user5,
+                label: 'Profile',
+                index: 3,
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedBottomNavIndex == index;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedBottomNavIndex = index;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? AppTheme.primaryBlue.withOpacity(0.1) 
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? AppTheme.primaryBlue : AppTheme.textLight,
+              size: 24,
+            ),
+            const Gap(4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isSelected ? AppTheme.primaryBlue : AppTheme.textLight,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );
