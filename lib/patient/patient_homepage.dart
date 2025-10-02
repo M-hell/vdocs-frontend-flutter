@@ -581,13 +581,18 @@ class _PatientHomePageState extends State<PatientHomePage> {
                   subtitle: 'Share your medical documents',
                   iconColor: AppTheme.success,
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ReportUploadPage(),
-                        settings: RouteSettings(arguments: _dio),
-                      ),
-                    );
+                    if (_patientData != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ReportUploadPage(),
+                          settings: RouteSettings(arguments: {
+                            'dio': _dio,
+                            'patientId': _patientData!['id'],
+                          }),
+                        ),
+                      );
+                    }
                   },
                 ),
               ),
