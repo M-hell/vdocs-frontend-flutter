@@ -184,6 +184,57 @@ class _PatientHomePageState extends State<PatientHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // V_Docs Logo at top
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Iconsax.health,
+                      color: AppTheme.white,
+                      size: 24,
+                    ),
+                  ),
+                  const Gap(12),
+                  Text(
+                    'V_Docs',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: AppTheme.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => _showProfileDialog(),
+                    icon: const Icon(
+                      Iconsax.profile_circle,
+                      color: AppTheme.white,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _showLogoutDialog(),
+                    icon: const Icon(
+                      Iconsax.logout,
+                      color: AppTheme.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const Gap(20),
+          // User Welcome Section
           Row(
             children: [
               GestureDetector(
@@ -224,24 +275,6 @@ class _PatientHomePageState extends State<PatientHomePage> {
                     ),
                   ],
                 ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => _showProfileDialog(),
-                    icon: const Icon(
-                      Iconsax.profile_circle,
-                      color: AppTheme.white,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _showLogoutDialog(),
-                    icon: const Icon(
-                      Iconsax.logout,
-                      color: AppTheme.white,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

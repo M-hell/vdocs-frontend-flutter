@@ -97,7 +97,39 @@ class _ReportUploadPageState extends State<ReportUploadPage> {
     return Scaffold(
       backgroundColor: AppTheme.lightGrey,
       appBar: AppBar(
-        title: const Text("Upload Report"),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Iconsax.health, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              "V_Docs",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                "Upload",
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: AppTheme.white,
         elevation: 0,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:gap/gap.dart';
+import '../core/theme/app_theme.dart';
 
 class BookAppointmentPage extends StatefulWidget {
   final Dio dio;
@@ -48,333 +51,804 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       final response = await widget.dio.get(
         'http://localhost:8080/api/clinic/auth/all',
       );
-      if (mounted) {
+
+      if (response.statusCode == 200) {
+        print('Clinics API Response: ${response.data}'); // Debug log
         setState(() {
-          clinics = response.data ?? [];
+          clinics = response.data is List ? response.data : [];
           isLoading = false;
         });
+        print('Clinics loaded: ${clinics.length}'); // Debug log
+        if (clinics.isNotEmpty) {
+          print('First clinic: ${clinics[0]}'); // Debug log
+        }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          clinics = [];
-          isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load clinics: ${e.toString()}')),
-        );
-      }
+      print('Error fetching clinics: $e'); // Debug log
+      setState(() {
+        isLoading = false;
+      });
+      _showErrorDialog('Failed to load clinics: $e');
     }
   }
 
   Future<void> fetchPatientReports() async {
-    if (mounted) {
-      setState(() {
-        isLoadingReports = true;
-      });
-    }
+    setState(() {
+      isLoadingReports = true;
+    });
 
     try {
       final response = await widget.dio.get(
         'http://localhost:8080/api/patient/reports/patient/${widget.patientId}',
       );
-      
-      if (mounted) {
+
+      if (response.statusCode == 200) {
         setState(() {
-          patientReports = response.data ?? [];
+          patientReports = response.data;
           isLoadingReports = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          patientReports = [];
-          isLoadingReports = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load reports: ${e.toString()}')),
-        );
-      }
+      setState(() {
+        isLoadingReports = false;
+      });
     }
   }
 
-  Future<void> submitAppointment() async {
+  Future<void> bookAppointment() async {
     if (selectedClinic == null || selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select clinic and date')),
-      );
+      _showErrorDialog('Please select a clinic and date');
       return;
     }
 
-    final body = {
-      "patientId": widget.patientId,
-      "patientName": widget.patientName,
-      "patientContactNo": widget.patientContactNo,
-      "clinicId": selectedClinic['id'],
-      "appointmentDate": selectedDate!.toIso8601String(),
-      "medicalRequirement": _medicalRequirementController.text,
-      "patientReportUrl": _reportUrlController.text,
-    };
-
     try {
+      final appointmentData = {
+        "patientId": widget.patientId,
+        "patientName": widget.patientName,
+        "patientContactNo": widget.patientContactNo,
+        "clinicId": selectedClinic['id'],
+        "appointmentDate": selectedDate!.toIso8601String(),
+        "medicalRequirement": _medicalRequirementController.text,
+        "patientReportUrl": selectedReport?['fileUrl'] ?? _reportUrlController.text,
+      };
+
       final response = await widget.dio.post(
         'http://localhost:8080/api/clinic/appointments/create',
-        data: body,
+        data: appointmentData,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment booked successfully')),
-        );
-        Navigator.pop(context, response.data);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _showSuccessDialog('Appointment booked successfully!');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to book appointment: ${e.toString()}')),
-        );
-      }
+      _showErrorDialog('Failed to book appointment: $e');
     }
   }
 
-  Future<void> pickDate() async {
-    final date = await showDatePicker(
+  void _showErrorDialog(String message) {
+    showDialog(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Iconsax.warning_2, color: AppTheme.error),
+            const Gap(8),
+            const Text('Error'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
-    if (date != null && mounted) {
-      final time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-      );
-      if (time != null && mounted) {
-        setState(() {
-          selectedDate = DateTime(
-            date.year,
-            date.month,
-            date.day,
-            time.hour,
-            time.minute,
-          );
-        });
-      }
-    }
+  }
+
+  void _showSuccessDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Iconsax.tick_circle, color: AppTheme.success),
+            const Gap(8),
+            const Text('Success'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context, true); // Go back to home with success flag
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.lightGrey,
       appBar: AppBar(
-        title: const Text('Book Appointment'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.green[700],
-        elevation: 1,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Iconsax.health,
+                size: 20,
+              ),
+            ),
+            const Gap(8),
+            const Text('V_Docs'),
+            const Gap(8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Book',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.white,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: AppTheme.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      backgroundColor: Colors.white,
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+          ? Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildDropdownField(),
-                  const SizedBox(height: 16),
-                  _buildDatePickerField(),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _medicalRequirementController,
-                    label: 'Medical Requirement',
-                    icon: Icons.medical_services,
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
                   ),
-                  const SizedBox(height: 16),
-                  _buildReportDropdown(),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _reportUrlController,
-                    label: 'Report URL (Auto-filled or manual)',
-                    icon: Icons.upload_file,
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: submitAppointment,
-                      icon: const Icon(Icons.book_online),
-                      label: const Text('Book Appointment'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green[700],
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 16),
-                      ),
+                  const Gap(16),
+                  Text(
+                    'Loading clinics...',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textLight,
                     ),
                   ),
                 ],
               ),
+            )
+          : SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header Section
+                    _buildHeader(),
+                    const Gap(24),
+                    
+                    // Select Clinic Section
+                    _buildSectionCard(
+                      title: 'Select Clinic',
+                      icon: Iconsax.hospital,
+                      child: _buildClinicSelection(),
+                    ),
+                    const Gap(16),
+                    
+                    // Select Date Section
+                    _buildSectionCard(
+                      title: 'Appointment Date',
+                      icon: Iconsax.calendar,
+                      child: _buildDateSelection(),
+                    ),
+                    const Gap(16),
+                    
+                    // Medical Requirement Section
+                    _buildSectionCard(
+                      title: 'Medical Requirement',
+                      icon: Iconsax.health,
+                      child: _buildMedicalRequirement(),
+                    ),
+                    const Gap(16),
+                    
+                    // Report Selection Section
+                    _buildSectionCard(
+                      title: 'Attach Report (Optional)',
+                      icon: Iconsax.document,
+                      child: _buildReportSelection(),
+                    ),
+                    const Gap(32),
+                    
+                    // Book Button
+                    _buildBookButton(),
+                    const Gap(24),
+                  ],
+                ),
+              ),
             ),
     );
   }
 
-  Widget _buildReportDropdown() {
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: AppTheme.primaryGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryBlue.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Iconsax.calendar_add,
+              size: 48,
+              color: AppTheme.white,
+            ),
+          ),
+          const Gap(16),
+          Text(
+            'Schedule Your Appointment',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppTheme.white,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const Gap(8),
+          Text(
+            'Book a consultation with our expert doctors',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.white.withOpacity(0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: AppTheme.primaryBlue, size: 20),
+              ),
+              const Gap(12),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const Gap(16),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClinicSelection() {
+    if (clinics.isEmpty) {
+      return const Center(child: Text('No clinics available'));
+    }
+
+    return Column(
+      children: clinics.map((clinic) {
+        final isSelected = selectedClinic == clinic;
+        final clinicName = clinic['name']?.toString() ?? 'Unknown Clinic';
+        final clinicAddress = clinic['address']?.toString() ?? 'No address';
+        final clinicContact = clinic['contactNo']?.toString() ?? '';
+        
+        print('Rendering clinic: $clinicName'); // Debug log
+        
+        return GestureDetector(
+          onTap: () => setState(() => selectedClinic = clinic),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isSelected 
+                  ? AppTheme.primaryBlue.withOpacity(0.1) 
+                  : AppTheme.lightGrey,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected 
+                    ? AppTheme.primaryBlue 
+                    : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? AppTheme.primaryBlue 
+                        : AppTheme.primaryBlue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Iconsax.hospital,
+                    color: isSelected ? AppTheme.white : AppTheme.primaryBlue,
+                    size: 20,
+                  ),
+                ),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        clinicName,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? AppTheme.primaryBlue : null,
+                        ),
+                      ),
+                      const Gap(4),
+                      Text(
+                        clinicAddress,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textLight,
+                        ),
+                      ),
+                      if (clinicContact.isNotEmpty) ...[
+                        const Gap(2),
+                        Text(
+                          clinicContact,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textLight,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(
+                    Iconsax.tick_circle5,
+                    color: AppTheme.primaryBlue,
+                  ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDateSelection() {
+    return GestureDetector(
+      onTap: () async {
+        final DateTime? picked = await showDatePicker(
+          context: context,
+          initialDate: selectedDate ?? DateTime.now(),
+          firstDate: DateTime.now(),
+          lastDate: DateTime.now().add(const Duration(days: 90)),
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: ColorScheme.light(
+                  primary: AppTheme.primaryBlue,
+                  onPrimary: AppTheme.white,
+                  onSurface: AppTheme.textDark,
+                ),
+              ),
+              child: child!,
+            );
+          },
+        );
+        if (picked != null) {
+          setState(() => selectedDate = picked);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selectedDate != null 
+              ? AppTheme.primaryBlue.withOpacity(0.1) 
+              : AppTheme.lightGrey,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selectedDate != null 
+                ? AppTheme.primaryBlue 
+                : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Iconsax.calendar_1,
+              color: selectedDate != null 
+                  ? AppTheme.primaryBlue 
+                  : AppTheme.textLight,
+            ),
+            const Gap(12),
+            Expanded(
+              child: Text(
+                selectedDate != null
+                    ? DateFormat('EEEE, MMMM d, yyyy').format(selectedDate!)
+                    : 'Select appointment date',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: selectedDate != null 
+                      ? AppTheme.primaryBlue 
+                      : AppTheme.textLight,
+                  fontWeight: selectedDate != null 
+                      ? FontWeight.w600 
+                      : FontWeight.normal,
+                ),
+              ),
+            ),
+            Icon(
+              Iconsax.arrow_right_3,
+              color: AppTheme.textLight,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMedicalRequirement() {
+    return TextField(
+      controller: _medicalRequirementController,
+      maxLines: 4,
+      decoration: InputDecoration(
+        hintText: 'Describe your medical concern or symptoms...',
+        filled: true,
+        fillColor: AppTheme.lightGrey,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportSelection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const Icon(Icons.folder, color: Colors.blue),
-            const SizedBox(width: 8),
-            const Text(
-              'Select Patient Report (Optional)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const Spacer(),
-            if (isLoadingReports)
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        
-        if (patientReports.isEmpty && !isLoadingReports)
-          Container(
-            width: double.infinity,
+        // Report Selection Button/Field
+        GestureDetector(
+          onTap: isLoadingReports ? null : () => _showReportSelectionDialog(),
+          child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: const Text(
-              'No reports found for this patient',
-              style: TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          )
-        else if (!isLoadingReports && patientReports.isNotEmpty)
-          DropdownButtonFormField<dynamic>(
-            decoration: const InputDecoration(
-              labelText: 'Choose Report',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.description),
-            ),
-            value: selectedReport,
-            isExpanded: true,
-            items: [
-              const DropdownMenuItem<dynamic>(
-                value: null,
-                child: Text('Select a report...'),
+              color: AppTheme.lightGrey,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selectedReport != null 
+                    ? AppTheme.success 
+                    : AppTheme.textLight.withOpacity(0.3),
+                width: 1.5,
               ),
-              ...patientReports.map<DropdownMenuItem<dynamic>>((report) {
-                final fileName = report['originalName'] ?? 'Unknown File';
-                final category = report['category'] ?? 'No Category';
-                final uploadDate = report['uploadedAt'] != null 
-                    ? DateFormat('MMM dd, yyyy').format(DateTime.parse(report['uploadedAt']))
-                    : 'Unknown Date';
-                final hasUrl = report['fileUrl'] != null && report['fileUrl'].toString().isNotEmpty;
-                
-                return DropdownMenuItem<dynamic>(
-                  value: report,
-                  enabled: hasUrl,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: selectedReport != null 
+                        ? AppTheme.success.withOpacity(0.1)
+                        : AppTheme.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Iconsax.document_text,
+                    color: selectedReport != null 
+                        ? AppTheme.success 
+                        : AppTheme.primaryBlue,
+                    size: 20,
+                  ),
+                ),
+                const Gap(12),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        fileName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: hasUrl ? Colors.black : Colors.grey,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        category,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: hasUrl ? Colors.grey[600] : Colors.grey[400],
-                        ),
-                      ),
-                      Text(
-                        uploadDate + (hasUrl ? '' : ' (No URL)'),
-                        style: TextStyle(
+                        'Select Patient Report',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textLight,
                           fontSize: 11,
-                          color: hasUrl ? Colors.grey[500] : Colors.grey[400],
                         ),
                       ),
+                      const Gap(4),
+                      if (isLoadingReports)
+                        const Text('Loading reports...')
+                      else if (selectedReport != null)
+                        Text(
+                          selectedReport['originalName'] ?? 'Selected Report',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.success,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      else
+                        Text(
+                          patientReports.isEmpty 
+                              ? 'No reports available' 
+                              : 'Tap to choose from ${patientReports.length} report(s)',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textLight,
+                          ),
+                        ),
                     ],
                   ),
-                );
-              }).toList(),
-            ],
-            onChanged: (value) {
-              setState(() {
-                selectedReport = value;
-                if (value != null && value['fileUrl'] != null) {
-                  _reportUrlController.text = value['fileUrl'].toString();
-                } else if (value == null) {
-                  _reportUrlController.clear();
-                }
-              });
-            },
+                ),
+                if (selectedReport != null)
+                  IconButton(
+                    icon: const Icon(Iconsax.close_circle, color: AppTheme.error),
+                    onPressed: () => setState(() {
+                      selectedReport = null;
+                      _reportUrlController.clear();
+                    }),
+                  )
+                else
+                  const Icon(
+                    Iconsax.arrow_down_1,
+                    color: AppTheme.textLight,
+                    size: 20,
+                  ),
+              ],
+            ),
           ),
+        ),
+        const Gap(12),
+        const Divider(),
+        const Gap(12),
+        TextField(
+          controller: _reportUrlController,
+          enabled: selectedReport == null,
+          decoration: InputDecoration(
+            hintText: 'Or paste report URL here...',
+            prefixIcon: const Icon(Iconsax.link),
+            filled: true,
+            fillColor: selectedReport == null 
+                ? AppTheme.lightGrey 
+                : AppTheme.lightGrey.withOpacity(0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildDropdownField() {
-    return DropdownButtonFormField<dynamic>(
-      decoration: const InputDecoration(
-        labelText: 'Select Clinic',
-        border: OutlineInputBorder(),
-        prefixIcon: Icon(Icons.local_hospital),
+  void _showReportSelectionDialog() {
+    if (patientReports.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No reports available to select')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      value: selectedClinic,
-      items: clinics.map<DropdownMenuItem<dynamic>>((clinic) {
-        return DropdownMenuItem<dynamic>(
-          value: clinic,
-          child: Text(clinic['name']?.toString() ?? 'Unknown Clinic'),
-        );
-      }).toList(),
-      onChanged: (value) {
-        setState(() {
-          selectedClinic = value;
-        });
-      },
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Iconsax.folder_open,
+                    color: AppTheme.primaryBlue,
+                    size: 20,
+                  ),
+                ),
+                const Gap(12),
+                Text(
+                  'Select a Report',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Gap(16),
+            const Divider(),
+            const Gap(8),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: patientReports.length,
+                itemBuilder: (context, index) {
+                  final report = patientReports[index];
+                  final fileName = report['originalName'] ?? 'Unknown File';
+                  final category = report['category'] ?? 'No Category';
+                  final uploadDate = report['uploadedAt'] != null
+                      ? DateFormat('MMM dd, yyyy').format(
+                          DateTime.parse(report['uploadedAt']))
+                      : 'Unknown Date';
+                  final hasUrl = report['fileUrl'] != null &&
+                      report['fileUrl'].toString().isNotEmpty;
+
+                  return ListTile(
+                    enabled: hasUrl,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: hasUrl
+                            ? AppTheme.success.withOpacity(0.1)
+                            : AppTheme.textLight.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Iconsax.document_text,
+                        color: hasUrl ? AppTheme.success : AppTheme.textLight,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      fileName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: hasUrl ? null : AppTheme.textLight,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          category,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textLight,
+                          ),
+                        ),
+                        Text(
+                          uploadDate + (hasUrl ? '' : ' (No URL available)'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: hasUrl
+                        ? const Icon(Iconsax.tick_circle, color: AppTheme.success)
+                        : const Icon(Iconsax.close_circle, color: AppTheme.error),
+                    onTap: hasUrl
+                        ? () {
+                            setState(() {
+                              selectedReport = report;
+                              _reportUrlController.text =
+                                  report['fileUrl'].toString();
+                            });
+                            Navigator.pop(context);
+                          }
+                        : null,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildDatePickerField() {
-    return TextFormField(
-      readOnly: true,
-      decoration: InputDecoration(
-        labelText: selectedDate == null
-            ? 'Pick Appointment Date & Time'
-            : 'Appointment: ${DateFormat('yyyy-MM-dd – HH:mm').format(selectedDate!)}',
-        border: const OutlineInputBorder(),
-        prefixIcon: const Icon(Icons.calendar_today),
+  Widget _buildBookButton() {
+    return ElevatedButton(
+      onPressed: bookAppointment,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: AppTheme.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 8,
       ),
-      onTap: pickDate,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Iconsax.tick_circle),
+          const Gap(8),
+          Text(
+            'Book Appointment',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-  }) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        prefixIcon: Icon(icon),
-      ),
-    );
+  @override
+  void dispose() {
+    _medicalRequirementController.dispose();
+    _reportUrlController.dispose();
+    super.dispose();
   }
 }

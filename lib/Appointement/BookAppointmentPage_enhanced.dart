@@ -73,7 +73,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
     try {
       final response = await widget.dio.get(
-        'http://localhost:8080/api/patient/reports/${widget.patientId}',
+        'http://localhost:8080/api/patient/reports/patient/${widget.patientId}',
       );
 
       if (response.statusCode == 200) {
@@ -105,7 +105,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       };
 
       final response = await widget.dio.post(
-        'http://localhost:8080/api/appointment/create',
+        'http://localhost:8080/api/clinic/appointment/create',
         data: appointmentData,
       );
 
@@ -171,7 +171,38 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     return Scaffold(
       backgroundColor: AppTheme.lightGrey,
       appBar: AppBar(
-        title: const Text('Book Appointment'),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Iconsax.health,
+                size: 20,
+              ),
+            ),
+            const Gap(8),
+            const Text('V_Docs'),
+            const Gap(8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Book',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.white,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: AppTheme.white,
         elevation: 0,
@@ -182,8 +213,20 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       ),
       body: isLoading
           ? Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                  ),
+                  const Gap(16),
+                  Text(
+                    'Loading clinics...',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textLight,
+                    ),
+                  ),
+                ],
               ),
             )
           : SafeArea(
