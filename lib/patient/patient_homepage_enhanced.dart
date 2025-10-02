@@ -22,6 +22,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
   Map<String, dynamic>? _patientData;
   bool _isLoading = true;
   String? _errorMessage;
+  int _selectedIndex = 0;
   PageController _healthTipsController = PageController();
   int _currentTipIndex = 0;
   Timer? _carouselTimer;
@@ -341,7 +342,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
                             Text(
                               tip['subtitle'],
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textLight,
+                                color: AppTheme.textSecondary,
                               ),
                             ),
                           ],
@@ -453,13 +454,13 @@ class _PatientHomePageState extends State<PatientHomePage> {
                                 Icon(
                                   Iconsax.location,
                                   size: 14,
-                                  color: AppTheme.textLight,
+                                  color: AppTheme.textSecondary,
                                 ),
                                 const Gap(4),
                                 Text(
                                   doctor['distance'],
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.textLight,
+                                    color: AppTheme.textSecondary,
                                   ),
                                 ),
                               ],
@@ -556,12 +557,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => BookAppointmentPage(
-                          dio: _dio,
-                          patientId: _patientData!['id'],
-                          patientName: '${_patientData!['firstName']} ${_patientData!['lastName']}',
-                          patientContactNo: _patientData!['phoneNumber'] ?? '',
-                        ),
+                        builder: (context) => BookAppointmentPage(),
                       ),
                     );
                   },
@@ -581,13 +577,17 @@ class _PatientHomePageState extends State<PatientHomePage> {
                   subtitle: 'Share your medical documents',
                   iconColor: AppTheme.success,
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ReportUploadPage(),
-                        settings: RouteSettings(arguments: _dio),
-                      ),
-                    );
+                    if (_patientData != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ReportUploadPage(
+                            dio: _dio,
+                            patientId: _patientData!['id'],
+                          ),
+                        ),
+                      );
+                    }
                   },
                 ),
               ),
@@ -711,7 +711,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
                 Text(
                   _patientData!['email'] ?? '',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textLight,
+                    color: AppTheme.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -812,7 +812,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
               Text(
                 label,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textLight,
+                  color: AppTheme.textSecondary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -870,6 +870,21 @@ class _PatientHomePageState extends State<PatientHomePage> {
     );
   }
 
+  void _onBottomNavTap(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    switch (index) {
+      case 1:
+        _navigateToAppointments();
+        break;
+      case 2:
+        _navigateToReports();
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -885,7 +900,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
               Text(
                 'Loading your dashboard...',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textLight,
+                  color: AppTheme.textSecondary,
                 ),
               ),
             ],
@@ -916,7 +931,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
               Text(
                 _errorMessage!,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textLight,
+                  color: AppTheme.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -937,7 +952,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.lightGrey,
+      backgroundColor: AppTheme.backgroundLight,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
