@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:iconsax/iconsax.dart';
+import 'package:gap/gap.dart';
+import '../core/theme/app_theme.dart';
 
 class PatientRegisterPage extends StatefulWidget {
   @override
@@ -22,7 +25,9 @@ class _PatientRegisterPageState extends State<PatientRegisterPage> {
   String? _errorMessage;
   String? _successMessage;
   bool _isLoading = false;
-  String _selectedGender = 'Male';
+  String? _selectedGender;
+  List<String> _allergies = [];
+  final _allergyController = TextEditingController();
 
   @override
   void initState() {
@@ -35,20 +40,36 @@ class _PatientRegisterPageState extends State<PatientRegisterPage> {
     if (kIsWeb) _dio.options.extra['withCredentials'] = true;
   }
 
+  void _addAllergy() {
+    if (_allergyController.text.trim().isNotEmpty) {
+      setState(() {
+        _allergies.add(_allergyController.text.trim());
+        _allergyController.clear();
+      });
+    }
+  }
+
+  void _removeAllergy(int index) {
+    setState(() {
+      _allergies.removeAt(index);
+    });
+  }
+
   Future<void> _register() async {
+    // Validate only required fields
     if (_firstNameController.text.isEmpty ||
         _lastNameController.text.isEmpty ||
         _ageController.text.isEmpty ||
         _phoneController.text.isEmpty ||
         _emailController.text.isEmpty ||
-        _addressController.text.isEmpty ||
         _passwordController.text.isEmpty) {
       setState(() {
-        _errorMessage = "Please fill in all required fields.";
+        _errorMessage = "Please fill in all required fields (marked with *).";
         _successMessage = null;
       });
       return;
     }
+    
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
         _errorMessage = "Passwords do not match.";
@@ -64,26 +85,38 @@ class _PatientRegisterPageState extends State<PatientRegisterPage> {
     });
 
     try {
+      // Prepare request data - only include non-empty optional fields
+      final Map<String, dynamic> requestData = {
+        "firstName": _firstNameController.text.trim(),
+        "lastName": _lastNameController.text.trim(),
+        "age": int.parse(_ageController.text),
+        "phoneNumber": _phoneController.text.trim(),
+        "email": _emailController.text.trim(),
+        "password": _passwordController.text,
+      };
+
+      // Add optional fields only if they have values
+      if (_selectedGender != null) {
+        requestData["gender"] = _selectedGender;
+      }
+      if (_addressController.text.trim().isNotEmpty) {
+        requestData["address"] = _addressController.text.trim();
+      }
+      if (_medicalHistoryController.text.trim().isNotEmpty) {
+        requestData["medicalHistory"] = _medicalHistoryController.text.trim();
+      }
+      if (_allergies.isNotEmpty) {
+        requestData["allergies"] = _allergies.map((allergy) => {"allergyName": allergy}).toList();
+      }
+
       final response = await _dio.post(
         "http://localhost:8080/api/patient/auth/register",
-        data: {
-          "firstName": _firstNameController.text,
-          "lastName": _lastNameController.text,
-          "age": int.parse(_ageController.text),
-          "gender": _selectedGender,
-          "phoneNumber": _phoneController.text,
-          "email": _emailController.text,
-          "address": _addressController.text,
-          "medicalHistory": _medicalHistoryController.text.isEmpty
-              ? "None"
-              : _medicalHistoryController.text,
-          "password": _passwordController.text,
-        },
+        data: requestData,
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         setState(() {
-          _successMessage = "Registration successful! Please login with your credentials.";
+          _successMessage = "Registration successful! Redirecting to login...";
         });
         Future.delayed(const Duration(seconds: 2), () {
           Navigator.pop(context);
@@ -95,7 +128,7 @@ class _PatientRegisterPageState extends State<PatientRegisterPage> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = "Error: $e";
+        _errorMessage = "Error: ${e.toString().contains('DioException') ? 'Network error. Please check your connection.' : e}";
       });
     } finally {
       setState(() {
@@ -104,19 +137,28 @@ class _PatientRegisterPageState extends State<PatientRegisterPage> {
     }
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(String label, IconData icon, {bool isRequired = false}) {
     return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.white70),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      prefixIcon: Icon(icon, color: Colors.white70),
+      labelText: label + (isRequired ? " *" : ""),
+      labelStyle: TextStyle(color: AppTheme.textLight),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppTheme.textLight.withOpacity(0.3)),
+      ),
+      prefixIcon: Icon(icon, color: AppTheme.primaryBlue),
+      filled: true,
+      fillColor: AppTheme.lightGrey,
       enabledBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.white24),
-        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppTheme.textLight.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(12),
       ),
       focusedBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.greenAccent),
-        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: AppTheme.error),
+        borderRadius: BorderRadius.circular(12),
       ),
     );
   }
@@ -124,142 +166,479 @@ class _PatientRegisterPageState extends State<PatientRegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppTheme.lightGrey,
       appBar: AppBar(
-        title: const Text("Patient Registration"),
-        backgroundColor: const Color.fromARGB(255, 48, 105, 36),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Iconsax.health, size: 20),
+            ),
+            const Gap(10),
+            const Text(
+              "V_Docs",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const Gap(8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                "Register",
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: AppTheme.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SafeArea(
         child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.person_add_outlined, size: 60, color: Colors.white),
-              const SizedBox(height: 16),
-              const Text(
-                "Create Patient Account",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              // Header Section
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: const Icon(
+                        Iconsax.user_add,
+                        size: 40,
+                        color: AppTheme.white,
+                      ),
+                    ),
+                    const Gap(16),
+                    Text(
+                      "Create Patient Account",
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const Gap(8),
+                    Text(
+                      "Join V_Docs for better healthcare management",
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.white.withOpacity(0.9),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 30),
+              const Gap(32),
 
-              // Name Fields
-              TextField(controller: _firstNameController, style: const TextStyle(color: Colors.white), decoration: _inputDecoration("First Name *", Icons.person_outline)),
-              const SizedBox(height: 16),
-              TextField(controller: _lastNameController, style: const TextStyle(color: Colors.white), decoration: _inputDecoration("Last Name *", Icons.person_outline)),
-              const SizedBox(height: 16),
-
-              // Age & Gender
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _ageController,
-                      style: const TextStyle(color: Colors.white),
-                      keyboardType: TextInputType.number,
-                      decoration: _inputDecoration("Age *", Icons.calendar_today_outlined),
+              // Form Section
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Required Fields Section
+                    Text(
+                      "Required Information",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    const Gap(16),
+
+                    // Name Fields
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _firstNameController,
+                            decoration: _inputDecoration("First Name", Iconsax.user, isRequired: true),
+                          ),
+                        ),
+                        const Gap(16),
+                        Expanded(
+                          child: TextField(
+                            controller: _lastNameController,
+                            decoration: _inputDecoration("Last Name", Iconsax.user, isRequired: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Gap(16),
+
+                    // Age Field
+                    TextField(
+                      controller: _ageController,
+                      keyboardType: TextInputType.number,
+                      decoration: _inputDecoration("Age", Iconsax.calendar, isRequired: true),
+                    ),
+                    const Gap(16),
+
+                    // Contact Fields
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: _inputDecoration("Phone Number", Iconsax.call, isRequired: true),
+                    ),
+                    const Gap(16),
+
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: _inputDecoration("Email", Iconsax.message, isRequired: true),
+                    ),
+                    const Gap(16),
+
+                    // Password Fields
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: _inputDecoration("Password", Iconsax.lock, isRequired: true),
+                    ),
+                    const Gap(16),
+
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: true,
+                      decoration: _inputDecoration("Confirm Password", Iconsax.lock, isRequired: true),
+                    ),
+                    const Gap(24),
+
+                    // Optional Fields Section
+                    const Divider(),
+                    const Gap(16),
+                    Text(
+                      "Optional Information",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textLight,
+                      ),
+                    ),
+                    const Gap(8),
+                    Text(
+                      "You can fill these later in your profile",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textLight,
+                      ),
+                    ),
+                    const Gap(16),
+
+                    // Gender Selection
+                    DropdownButtonFormField<String>(
                       value: _selectedGender,
-                      dropdownColor: const Color(0xFF1F1F1F),
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration("Gender *", Icons.transgender_outlined),
+                      decoration: _inputDecoration("Gender", Iconsax.profile_2user),
                       items: ['Male', 'Female', 'Other']
-                          .map((gender) => DropdownMenuItem(value: gender, child: Text(gender, style: const TextStyle(color: Colors.white))))
+                          .map((gender) => DropdownMenuItem(
+                                value: gender,
+                                child: Text(gender),
+                              ))
                           .toList(),
                       onChanged: (value) {
-                        if (value != null) setState(() => _selectedGender = value);
+                        setState(() => _selectedGender = value);
                       },
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                    const Gap(16),
 
-              // Other Fields
-              TextField(controller: _phoneController, style: const TextStyle(color: Colors.white), keyboardType: TextInputType.phone, decoration: _inputDecoration("Phone Number *", Icons.phone_outlined)),
-              const SizedBox(height: 16),
-              TextField(controller: _emailController, style: const TextStyle(color: Colors.white), keyboardType: TextInputType.emailAddress, decoration: _inputDecoration("Email *", Icons.email_outlined)),
-              const SizedBox(height: 16),
-              TextField(controller: _addressController, style: const TextStyle(color: Colors.white), maxLines: 2, decoration: _inputDecoration("Address *", Icons.location_on_outlined)),
-              const SizedBox(height: 16),
-              TextField(controller: _medicalHistoryController, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: _inputDecoration("Medical History (Optional)", Icons.medical_services_outlined)),
-              const SizedBox(height: 16),
-              TextField(controller: _passwordController, style: const TextStyle(color: Colors.white), obscureText: true, decoration: _inputDecoration("Password *", Icons.lock_outline)),
-              const SizedBox(height: 16),
-              TextField(controller: _confirmPasswordController, style: const TextStyle(color: Colors.white), obscureText: true, decoration: _inputDecoration("Confirm Password *", Icons.lock_outline)),
-              const SizedBox(height: 24),
+                    // Address Field
+                    TextField(
+                      controller: _addressController,
+                      maxLines: 2,
+                      decoration: _inputDecoration("Address", Iconsax.location),
+                    ),
+                    const Gap(16),
 
-              // Register Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _register,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.greenAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.black)
-                      : const Text("Register", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                    // Medical History Field
+                    TextField(
+                      controller: _medicalHistoryController,
+                      maxLines: 3,
+                      decoration: _inputDecoration("Medical History", Iconsax.health),
+                    ),
+                    const Gap(16),
+
+                    // Allergies Section
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Iconsax.warning_2, color: AppTheme.primaryBlue, size: 20),
+                            const Gap(8),
+                            Text(
+                              "Allergies",
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              "Optional",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.textLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Gap(8),
+                        
+                        // Add Allergy Input
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _allergyController,
+                                decoration: InputDecoration(
+                                  hintText: "Enter allergy name (e.g., Penicillin, Dust)",
+                                  filled: true,
+                                  fillColor: AppTheme.lightGrey,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: AppTheme.textLight.withOpacity(0.3)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: AppTheme.textLight.withOpacity(0.3)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onSubmitted: (_) => _addAllergy(),
+                              ),
+                            ),
+                            const Gap(8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryBlue,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Iconsax.add, color: AppTheme.white),
+                                onPressed: _addAllergy,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Gap(12),
+                        
+                        // Display Added Allergies
+                        if (_allergies.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.lightGrey.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.textLight.withOpacity(0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Iconsax.info_circle, color: AppTheme.textLight, size: 16),
+                                const Gap(8),
+                                Text(
+                                  "No allergies added yet",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.textLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _allergies.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final allergy = entry.value;
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Iconsax.warning_2, color: AppTheme.primaryBlue, size: 14),
+                                    const Gap(4),
+                                    Text(
+                                      allergy,
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: AppTheme.primaryBlue,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const Gap(4),
+                                    GestureDetector(
+                                      onTap: () => _removeAllergy(index),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.error.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          Iconsax.close_circle,
+                                          color: AppTheme.error,
+                                          size: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                      ],
+                    ),
+                    const Gap(32),
+
+                    // Register Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _register,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: AppTheme.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: AppTheme.white)
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Iconsax.user_add),
+                                  const Gap(8),
+                                  Text(
+                                    "Create Account",
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                    const Gap(16),
+
+                    // Login Link
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: RichText(
+                        text: TextSpan(
+                          text: "Already have an account? ",
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textLight,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: "Login",
+                              style: TextStyle(
+                                color: AppTheme.primaryBlue,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const Gap(16),
 
-              // Already have account
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Already have an account? Login", style: TextStyle(color: Colors.greenAccent, fontSize: 16)),
-              ),
-
-              // Success Message
-              if (_successMessage != null) ...[
-                const SizedBox(height: 20),
+              // Success/Error Messages
+              if (_successMessage != null) 
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green[900]?.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.greenAccent),
+                    color: AppTheme.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.success),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle_outline, color: Colors.greenAccent),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(_successMessage!, style: const TextStyle(color: Colors.white))),
+                      Icon(Iconsax.tick_circle, color: AppTheme.success),
+                      const Gap(12),
+                      Expanded(
+                        child: Text(
+                          _successMessage!,
+                          style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w500),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
 
-              // Error Message
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 20),
+              if (_errorMessage != null) 
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red[900]?.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.redAccent),
+                    color: AppTheme.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.error),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.redAccent),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white))),
+                      Icon(Iconsax.warning_2, color: AppTheme.error),
+                      const Gap(12),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(color: AppTheme.error, fontWeight: FontWeight.w500),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
 
-              const SizedBox(height: 20),
+              const Gap(32),
             ],
           ),
         ),
@@ -278,6 +657,7 @@ class _PatientRegisterPageState extends State<PatientRegisterPage> {
     _medicalHistoryController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _allergyController.dispose();
     super.dispose();
   }
 }
